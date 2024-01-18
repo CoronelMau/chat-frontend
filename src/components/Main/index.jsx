@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState, useRef, useEffect } from 'react';
 import { StyleSheetManager } from 'styled-components';
+import io from 'socket.io-client';
 
 import {
   MainSection,
@@ -21,43 +22,42 @@ export default function Chat({ currentUser }) {
   let minutes = date.getMinutes();
 
   const messagesContainerRef = useRef(null);
+  const [messages, setMessages] = useState([]);
+  const [socket, setSocket] = useState(null);
 
-  const [messages, setMessages] = useState([
-    { user: 'Mau', message: 'Text 3' },
-    { user: 'Astrid', message: 'Text 4' },
-    { user: 'Mau', message: 'Text 5' },
-    { user: 'Astrid', message: 'Text 6' },
-    { user: 'Mau', message: 'Text 7' },
-    { user: 'Astrid', message: 'Text 8' },
-    { user: 'Mau', message: 'Text 9' },
-    { user: 'Astrid', message: 'Text 10' },
-    { user: 'Mau', message: 'Text 11' },
-    { user: 'Astrid', message: 'Text 12' },
-  ]);
+  useEffect(() => {
+    const newSocket = io('http://localhost:3000', { forceNew: true });
+    setSocket(newSocket);
+
+    newSocket.on('new-message', (messageReceived) => {
+      setMessages((prevMessages) => [...prevMessages, messageReceived]);
+    });
+
+    fetch('http://localhost:3000/chat')
+      .then((res) => res.json())
+      .then((res) => setMessages(res))
+      .catch((error) => console.error('Error to load messages: ', error));
+  }, []);
 
   const handleSendMessage = (e) => {
-    if (e.keyCode === 13) {
-      setMessages([
-        ...messages,
-        { user: currentUser, message: e.target.value },
-      ]);
-
+    if (e.keyCode === 13 && e.target.value !== '') {
+      const newMessage = { user: currentUser, message: e.target.value };
+      socket.emit('new-message', newMessage);
       e.target.value = '';
     }
   };
 
   useEffect(() => {
-    // Hacer scroll hacia abajo
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, []);
 
   return (
     <StyleSheetManager shouldForwardProp={(prop) => prop !== 'isFromContact'}>
       <MainSection>
-        <Title>{currentUser}</Title>
+        <Title>General Chat</Title>
         <ChatSection ref={messagesContainerRef}>
           {messages.map((e, index) => (
             <MessageContainer
@@ -66,7 +66,7 @@ export default function Chat({ currentUser }) {
             >
               <p>{e.user}</p>
               <MessageText isFromContact={e.user === currentUser}>
-                {e.message}
+                {e.text}
               </MessageText>
               <InfoMessage>
                 {month +

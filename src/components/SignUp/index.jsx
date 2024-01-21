@@ -1,13 +1,12 @@
-/* eslint-disable react/prop-types */
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-import { LogIn, Input, Title, Button, Form } from '../../styles/Login';
+import { LogIn, Title, Form, Input, Button } from '../../styles/Login';
 
-export default function LogInPage() {
+export default function SignUp() {
+  const navigate = useNavigate();
   const [user, setUser] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
 
   const handleChangeUser = (e) => {
     setUser(e.target.value);
@@ -17,9 +16,7 @@ export default function LogInPage() {
     setPassword(e.target.value);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
+  const handleSubmit = () => {
     const data = {
       user,
       password,
@@ -33,18 +30,20 @@ export default function LogInPage() {
       body: JSON.stringify(data),
     };
 
-    fetch('http://localhost:3000/user/login', config)
+    fetch('http://localhost:3000/user/register', config)
       .then((res) => res.json())
       .then((res) => {
-        localStorage.setItem('token', JSON.stringify(res.jwt));
-        navigate('/chat');
+        console.log(res);
+        setUser('');
+        setPassword('');
+        navigate('/');
       })
       .catch((err) => console.error(err));
   };
 
   return (
     <LogIn>
-      <Title>Welcome!</Title>
+      <Title>Sign-In</Title>
       <Form>
         <Input placeholder="Username" onChange={handleChangeUser} />
         <Input
@@ -53,11 +52,7 @@ export default function LogInPage() {
           onChange={handleChangePwd}
         />
       </Form>
-      <Button onClick={handleSubmit}>Log In</Button>
-
-      <Link to="/sign-up">
-        <Button>Sign up</Button>
-      </Link>
+      <Button onClick={handleSubmit}>Sign-Up</Button>
     </LogIn>
   );
 }

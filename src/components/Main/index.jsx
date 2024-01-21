@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { StyleSheetManager } from 'styled-components';
 import io from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 
 import {
   MainSection,
@@ -14,16 +15,12 @@ import {
   InfoMessage,
 } from '../../styles/Main';
 
-export default function Chat({ currentUser }) {
-  let date = new Date();
-  let month = date.getMonth();
-  let day = date.getDate();
-  let hour = date.getHours();
-  let minutes = date.getMinutes();
-
+export default function Chat() {
   const messagesContainerRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [currentUser, setCurrentUser] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const newSocket = io('http://localhost:3000', { forceNew: true });
@@ -33,10 +30,55 @@ export default function Chat({ currentUser }) {
       setMessages((prevMessages) => [...prevMessages, messageReceived]);
     });
 
-    fetch('http://localhost:3000/chat')
-      .then((res) => res.json())
-      .then((res) => setMessages(res))
+    const jwt = JSON.parse(localStorage.getItem('token'));
+
+    const config = {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${jwt}`,
+      },
+    };
+
+    fetch('http://localhost:3000/user/chat', config)
+      .then((res) => {
+        // console.log(res);
+
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/');
+        }
+        return res.json();
+      })
+      .then((res) => {
+        // console.log(res);
+        setMessages(res);
+      })
       .catch((error) => console.error('Error to load messages: ', error));
+  }, []);
+
+  useEffect(() => {
+    const jwt = JSON.parse(localStorage.getItem('token'));
+
+    const config = {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+      },
+    };
+
+    fetch('http://localhost:3000/user/profile', config)
+      .then((res) => {
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/');
+        }
+
+        return res.json();
+      })
+      .then((res) => {
+        setCurrentUser(res.user);
+      })
+      .catch((error) => console.error(error));
   }, []);
 
   const handleSendMessage = (e) => {
@@ -68,15 +110,7 @@ export default function Chat({ currentUser }) {
               <MessageText isFromContact={e.user === currentUser}>
                 {e.text}
               </MessageText>
-              <InfoMessage>
-                {month +
-                  '/' +
-                  day +
-                  ' ' +
-                  hour +
-                  ':' +
-                  (minutes < 10 ? '0' + minutes : minutes)}
-              </InfoMessage>
+              <InfoMessage>{e.date}</InfoMessage>
             </MessageContainer>
           ))}
         </ChatSection>
